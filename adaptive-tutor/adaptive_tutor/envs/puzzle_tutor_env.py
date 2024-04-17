@@ -18,14 +18,14 @@ class PuzzleTutorEnv(gym.Env):
         super(PuzzleTutorEnv, self).__init__()
 
         self.beginner_elo_rating = beginner_elo_rating
+        self.moving_average_reward_window = moving_average_reward_window
+        
         self.action_space = MultiDiscrete([12, 10])
+        self.current_student_level = beginner_elo_rating
         self.student = Student(elo_rating=beginner_elo_rating)
         self.puzzle_bank = PuzzleBank()
 
-        self.moving_average_reward_window = moving_average_reward_window
-
         self.observation_space = Dict({
-            "current_student_level": Box(low=1000, high=1900, dtype=np.int32),
             "puzzle_success_history": Sequence(Tuple((Text(20), Discrete(2), Box(low=1000, high=1900, dtype=np.int32)))),
             "themes_covered": Box(low=0, high=1, shape=(12,), dtype=np.int32),
             "elo_covered": Box(low=0, high=1, shape=(10,), dtype=np.int32),
@@ -33,7 +33,6 @@ class PuzzleTutorEnv(gym.Env):
 
         # Initial observation state
         self.observation_state = {
-            "current_student_level": self.beginner_elo_rating,
             "puzzle_success_history": np.array([]),  # Example initial state
             "themes_covered": np.zeros(12, dtype=np.int32),
             "elo_covered": np.zeros(10, dtype=np.int32),
@@ -44,8 +43,10 @@ class PuzzleTutorEnv(gym.Env):
 
     def _get_obs(self):
         # observation_keys_to_relay = ["puzzle_success_history", "themes_covered", "elo_covered"]
-        # return {key: self.observation_state[key] for key in observation_keys_to_relay}
-        return self.observation_state
+        # return {key: self.observation_state[key] for key in self.observation_state.keys()}
+        return { key:(value[-1*(self.moving_average_reward_window):] if key=="puzzle_success_history"
+          else value) for key, value in self.observation_state.items() }
+        # return {}
 
     def _get_info(self):
         return {"info": None}
@@ -76,7 +77,6 @@ class PuzzleTutorEnv(gym.Env):
         super().reset(seed=seed)
 
         self.observation_state = {
-            "current_student_level": self.beginner_elo_rating,
             "puzzle_success_history": np.array([]).reshape(-1,3),  
             "themes_covered": np.zeros(12, dtype=np.int32),
             "elo_covered": np.zeros(10, dtype=np.int32),
@@ -116,7 +116,7 @@ class PuzzleTutorEnv(gym.Env):
         reward = self._compute_reward()
         observation = self._get_obs()
         info = self._get_info()
-        terminated = self.observation_state["current_student_level"] == 1900
+        terminated = self.current_student_level == 1900
 
         if self.render_mode == "human":
             self._render_frame()
