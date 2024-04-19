@@ -3,13 +3,15 @@ import chess
 import chess.engine
 
 class Student:
-    def __init__(self, elo_rating, lc0_weights, depth, time):
+    def __init__(self, elo_rating):
         # Initialize student attributes
-        self.elo_rating = elo_rating # update later
-        self.lc0_weights = lc0_weights
         self.engine = None
-        self.depth = depth
-        self.time = time
+        self.elo_rating = elo_rating # update later
+
+        # TODO: Hardcoding for now, change later
+        self.lc0_weights = "/Users/shikharrastogi/AdaptiveChessTutorRL/maia_weights/maia_1100.pb"
+        self.depth = 1
+        self.time = 0.1
 
     def initialize_engine(self):
         # Initialize the engine with specified LCZero weights
@@ -52,9 +54,16 @@ class Student:
         success = self.calculate_success(predicted_move, move_student)
 
         return success
+    
+# if __name__=='__main__':
+#     student = Student(elo_rating=1200)
+#     data = pd.read_csv('/Users/shikharrastogi/Downloads/lichess_db_puzzle.csv')
+#     puzzle_row_index = 3764376  # Row index of the puzzle you want to solve
+#     row = data.iloc[puzzle_row_index]
+#     student.solve_puzzle(row)
 
-
-# Example usage
+'''
+Example usage
     
 data = pd.read_csv('decompressed_puzzle.csv')
 puzzle_row_index = 3764376  # Row index of the puzzle you want to solve
@@ -68,3 +77,6 @@ print("Success:", success)
 
 # Close the engine when changing bot
 student.close_engine()
+
+'''
+
