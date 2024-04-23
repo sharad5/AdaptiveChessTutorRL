@@ -5,13 +5,20 @@ import chess.engine
 class Student:
     def __init__(self, elo_rating):
         # Initialize student attributes
+        self.elo_rating = elo_rating 
+        self.lc0_weights = f"maia_Weights/maia_{elo_rating}.pb"
+        #print(self.lc0_weights)
         self.engine = None
-        self.elo_rating = elo_rating # update later
-
-        # TODO: Hardcoding for now, change later
-        self.lc0_weights = "/Users/shikharrastogi/AdaptiveChessTutorRL/maia_weights/maia_1100.pb"
-        self.depth = 1
-        self.time = 0.1
+        weights_depth = {
+            '1100' : '1',
+            '1300' : '2',
+            '1500' : '3',
+            '1700' : '4',
+            '1900' : '5'
+            }
+        
+        self.depth = weights_depth.get(str(elo_rating), None)
+        #print(self.depth)
 
     def initialize_engine(self):
         # Initialize the engine with specified LCZero weights
@@ -22,6 +29,7 @@ class Student:
         # Close the engine
         if self.engine:
             self.engine.quit()
+        self.engine = None
 
     def predict_move(self, fen, move_start):
         # Setup the board and apply teacher's move
@@ -29,7 +37,7 @@ class Student:
         board.push(move_start)
 
         # Get the move predicted by the engine
-        result = self.engine.play(board, chess.engine.Limit(depth=self.depth, time=self.time))
+        result = self.engine.play(board, chess.engine.Limit(depth=self.depth))
         predicted_move = result.move
 
         return predicted_move
@@ -54,29 +62,23 @@ class Student:
         success = self.calculate_success(predicted_move, move_student)
 
         return success
-    
-# if __name__=='__main__':
-#     student = Student(elo_rating=1200)
-#     data = pd.read_csv('/Users/shikharrastogi/Downloads/lichess_db_puzzle.csv')
-#     puzzle_row_index = 3764376  # Row index of the puzzle you want to solve
-#     row = data.iloc[puzzle_row_index]
-#     student.solve_puzzle(row)
+
+
+# Example usage
 
 '''
-Example usage
-    
 data = pd.read_csv('decompressed_puzzle.csv')
-puzzle_row_index = 3764376  # Row index of the puzzle you want to solve
+puzzle_row_index = 10  # Row index of the puzzle you want to solve
 row = data.iloc[puzzle_row_index]
 
+
+
 # initialize bot's weight and depth
-student = Student(elo_rating=1200, lc0_weights="maia_Weights/maia_1900.pb", depth=7, time=1)
+student = Student(elo_rating=1100)
 
 success = student.solve_puzzle(puzzle=row)
 print("Success:", success)
 
 # Close the engine when changing bot
 student.close_engine()
-
 '''
-
