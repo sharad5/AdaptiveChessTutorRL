@@ -21,7 +21,7 @@ class PuzzleTutorEnv(gym.Env):
         super(PuzzleTutorEnv, self).__init__()
 
         self.beginner_elo_rating = beginner_elo_rating
-        self.moving_average_reward_window = moving_average_reward_window
+        self.moving_average_reward_window = 1
         
         self.action_space = MultiDiscrete([12, 10])
         self.current_student_level = beginner_elo_rating
@@ -84,7 +84,15 @@ class PuzzleTutorEnv(gym.Env):
         # r3 = (# Puzzles Covered)
         r3 = observation["puzzle_success_history"].shape[0]
 
-        return r1 + r2 - r3
+
+        return r1/1900 + np.min(observation["themes_covered"])/1900 - 3
+    
+    def _check_terminated(self, themes_covered):
+        for val in themes_covered:
+            if val<self.current_student_level+200:
+                return False
+        return True
+    
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
@@ -117,7 +125,7 @@ class PuzzleTutorEnv(gym.Env):
         
         # Update the themes_covered in Observational State
         theme_index = self.metadata["themes"].index(theme)
-        self.observation_state["themes_covered"][theme_index] = 1
+        self.observation_state["themes_covered"][theme_index] = max(self.observation_state["themes_covered"][theme_index], sampled_puzzle['Rating'])
 
         # Update the elo_covered in Observational State
         puzzle_elo_rating_index = self.metadata["puzzle_rating_brackets"].index(rating_bracket)
@@ -126,7 +134,7 @@ class PuzzleTutorEnv(gym.Env):
         reward = self._compute_reward()
         observation = self._get_obs()
         info = self._get_info()
-        terminated = self.current_student_level == 1900
+        terminated = self._check_terminated(self.observation_state["themes_covered"])
 
         if self.render_mode == "human":
             self._render_frame()

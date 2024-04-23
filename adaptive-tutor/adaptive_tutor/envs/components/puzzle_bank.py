@@ -8,7 +8,8 @@ class PuzzleBank:
         self.bank = pd.read_pickle('adaptive_tutor/puzzle_bank.pkl')
 
     def _get_puzzle(self, puzzleId):
-        return self.lichess_data.loc[self.lichess_data.PuzzleId==puzzleId].squeeze()
+        puzzle_row = self.lichess_data.loc[self.lichess_data.PuzzleId==puzzleId].squeeze()
+        return puzzle_row
 
     def sample_puzzle(self, action):
         '''
