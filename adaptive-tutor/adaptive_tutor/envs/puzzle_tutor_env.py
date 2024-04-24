@@ -16,7 +16,7 @@ class PuzzleTutorEnv(gym.Env):
 
     def __init__(self, 
                  render_mode=None, 
-                 beginner_elo_rating=1000, 
+                 beginner_elo_rating=1100,
                  moving_average_reward_window=20):
         super(PuzzleTutorEnv, self).__init__()
 
@@ -31,6 +31,7 @@ class PuzzleTutorEnv(gym.Env):
         self.observation_space = Dict({
             "puzzle_success_history": Sequence(Tuple((Text(20), Discrete(2), Text(15)))),
             "themes_covered": Box(low=0, high=1, shape=(10,), dtype=np.int32),
+            "num_success_themes_covered": Box(low=0, high=1e6, shape=(10,), dtype=np.int32),
             "elo_covered": Box(low=0, high=1, shape=(12,), dtype=np.int32),
         })
 
@@ -38,6 +39,7 @@ class PuzzleTutorEnv(gym.Env):
         self.observation_state = {
             "puzzle_success_history": np.array([]),  # Example initial state
             "themes_covered": np.zeros(10, dtype=np.int32),
+            "num_success_themes_covered": np.zeros(10, dtype=np.int32),
             "elo_covered": np.zeros(12, dtype=np.int32),
         }
 
@@ -101,6 +103,7 @@ class PuzzleTutorEnv(gym.Env):
         self.observation_state = {
             "puzzle_success_history": np.array([]).reshape(-1,3),  
             "themes_covered": np.zeros(10, dtype=np.int32),
+            "num_success_themes_covered": np.zeros(10, dtype=np.int32),
             "elo_covered": np.zeros(12, dtype=np.int32),
         }
 
@@ -125,7 +128,11 @@ class PuzzleTutorEnv(gym.Env):
         
         # Update the themes_covered in Observational State
         theme_index = self.metadata["themes"].index(theme)
-        self.observation_state["themes_covered"][theme_index] = max(self.observation_state["themes_covered"][theme_index], sampled_puzzle['Rating'])
+
+        if puzzle_success:
+            self.observation_state["themes_covered"][theme_index] = (self.observation_state["num_success_themes_covered"][theme_index] * self.observation_state["themes_covered"][theme_index] +  sampled_puzzle['Rating'])/(self.observation_state[ "num_success_themes_covered"][theme_index]+1)
+            # self.observation_state["themes_covered"][theme_index] = max(self.observation_state["themes_covered"][theme_index], sampled_puzzle['Rating'])
+            self.observation_state[ "num_success_themes_covered"][theme_index] += 1
 
         # Update the elo_covered in Observational State
         puzzle_elo_rating_index = self.metadata["puzzle_rating_brackets"].index(rating_bracket)
@@ -134,6 +141,8 @@ class PuzzleTutorEnv(gym.Env):
         reward = self._compute_reward()
         observation = self._get_obs()
         info = self._get_info()
+
+        # TODO: Change this logic with whatever the final level is
         terminated = self._check_terminated(self.observation_state["themes_covered"])
 
         if self.render_mode == "human":
