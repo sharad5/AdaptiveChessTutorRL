@@ -188,4 +188,22 @@ print('num_success_themes', num_success_themes)
 if num_success_themes > SOLVED_THEMES and num_success_puzzles_at_rating > SOLVED_PUZZLES:
     if curr_elo_rating < 1900:
         student.change_bot(200)
+
+
+# Learning rule: Successfully solved a puzzle of X level in every theme offered AND successfully solved Y puzzles in each theme offered
+curr_elo_rating = student.elo_rating
+print('curr_elo_rating', curr_elo_rating)
+
+SOLVED_PUZZLES = curr_elo_rating - 50 #X
+SOLVED_THEMES = 2 #Y
+
+min_elo_solved = np.min(observation_state.get('themes_covered')[observation_state.get('themes_covered') != 0])
+print('min_elo_solved', min_elo_solved)
+
+num_success_themes = np.sum(np.where(observation_state.get('themes_covered') > 0, 1, 0))
+print('num_success_themes', num_success_themes)
+
+if min_elo_solved > SOLVED_PUZZLES and np.mean(num_success_themes) > SOLVED_THEMES:
+    if curr_elo_rating < 1900:
+        student.change_bot(200)
 '''
