@@ -29,19 +29,24 @@ class PuzzleTutorEnv(gym.Env):
         self.student = Student(elo_rating=beginner_elo_rating)
         self.puzzle_bank = PuzzleBank()
 
+        # self.observation_space = Dict({
+        #     "puzzle_success_history": Sequence(Tuple((Text(20), Discrete(2), Text(15)))),
+        #     "themes_covered": Box(low=0, high=1, shape=(10,), dtype=np.int32),
+        #     "num_success_themes_covered": Box(low=0, high=1e6, shape=(10,), dtype=np.int32),
+        #     "elo_covered": Box(low=0, high=1, shape=(12,), dtype=np.int32),
+        # })
+
         self.observation_space = Dict({
-            "puzzle_success_history": Sequence(Tuple((Text(20), Discrete(2), Text(15)))),
             "themes_covered": Box(low=0, high=1, shape=(10,), dtype=np.int32),
-            "num_success_themes_covered": Box(low=0, high=1e6, shape=(10,), dtype=np.int32),
-            "elo_covered": Box(low=0, high=1, shape=(12,), dtype=np.int32),
+            "num_success_themes_covered": Box(low=0, high=1e6, shape=(10,), dtype=np.int32)
         })
+
+        self.puzzle_success_history = np.array([]).reshape(-1,3)
 
         # Initial observation state
         self.observation_state = {
-            "puzzle_success_history": np.array([]),  # Example initial state
             "themes_covered": np.zeros(10, dtype=np.int32),
             "num_success_themes_covered": np.zeros(10, dtype=np.int32),
-            "elo_covered": np.zeros(12, dtype=np.int32),
         }
 
         # Elo Aggregates & Success Rates
@@ -59,9 +64,9 @@ class PuzzleTutorEnv(gym.Env):
         # observation_keys_to_relay = ["puzzle_success_history", "themes_covered", "elo_covered"]
         # return {key: self.observation_state[key] for key in self.observation_state.keys()}
 
-        return { key:(value[-1*(self.moving_average_reward_window):] if key=="puzzle_success_history"
-          else value) for key, value in self.observation_state.items() }
-    
+        # return { key:(value[-1*(self.moving_average_reward_window):] if key=="puzzle_success_history"
+        #   else value) for key, value in self.observation_state.items() }
+        return self.observation_state
 
         # return {}
 
@@ -86,14 +91,14 @@ class PuzzleTutorEnv(gym.Env):
         observation = self._get_obs()
 
         # r1 = MovingAverage(success * ELO Rating of Puzzle, 20)
-        relevant_puzzle_history = observation["puzzle_success_history"][(-1*self.moving_average_reward_window):]
+        relevant_puzzle_history = self.puzzle_success_history[(-1*self.moving_average_reward_window):]
         r1 = np.mean([int(x[1]) * self._convert_bracket_to_reward(x[2]) for x in relevant_puzzle_history])
 
         # r2 = (# Themes Successfully solved)
         r2 = observation["themes_covered"].sum()
 
         # r3 = (# Puzzles Covered)
-        r3 = observation["puzzle_success_history"].shape[0]
+        r3 = self.puzzle_success_history.shape[0]
 
 
         return r1/1900 + np.min(observation["themes_covered"])/1900 - 3
@@ -109,11 +114,10 @@ class PuzzleTutorEnv(gym.Env):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
+        self.puzzle_success_history = np.array([]).reshape(-1,3)
         self.observation_state = {
-            "puzzle_success_history": np.array([]).reshape(-1,3),  
             "themes_covered": np.zeros(10, dtype=np.int32),
-            "num_success_themes_covered": np.zeros(10, dtype=np.int32),
-            "elo_covered": np.zeros(12, dtype=np.int32),
+            "num_success_themes_covered": np.zeros(10, dtype=np.int32)
         }
 
         for elo_bucket in self.metadata["puzzle_rating_brackets"]:
@@ -139,7 +143,7 @@ class PuzzleTutorEnv(gym.Env):
         
         # Update the puzzle_success_history in Observational State
         puzzle_success_tuple = np.array([theme, int(puzzle_success), rating_bracket]).reshape(-1,3)
-        self.observation_state["puzzle_success_history"] = np.append(self.observation_state["puzzle_success_history"], puzzle_success_tuple, axis=0)
+        self.puzzle_success_history = np.append(self.puzzle_success_history, puzzle_success_tuple, axis=0)
         
         # Update the themes_covered in Observational State
         theme_index = self.metadata["themes"].index(theme)
@@ -148,10 +152,6 @@ class PuzzleTutorEnv(gym.Env):
             self.observation_state["themes_covered"][theme_index] = (self.observation_state["num_success_themes_covered"][theme_index] * self.observation_state["themes_covered"][theme_index] +  sampled_puzzle['Rating'])/(self.observation_state[ "num_success_themes_covered"][theme_index]+1)
             # self.observation_state["themes_covered"][theme_index] = max(self.observation_state["themes_covered"][theme_index], sampled_puzzle['Rating'])
             self.observation_state[ "num_success_themes_covered"][theme_index] += 1
-
-        # Update the elo_covered in Observational State
-        puzzle_elo_rating_index = self.metadata["puzzle_rating_brackets"].index(rating_bracket)
-        self.observation_state["elo_covered"][puzzle_elo_rating_index] = 1
 
         # Elo Bucket Success Rate
         self.elo_aggregates[rating_bracket]['sum'] += puzzle_success
