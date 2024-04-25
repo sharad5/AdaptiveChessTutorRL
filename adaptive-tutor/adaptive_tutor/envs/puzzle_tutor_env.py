@@ -23,7 +23,8 @@ class PuzzleTutorEnv(gym.Env):
         self.beginner_elo_rating = beginner_elo_rating
         self.moving_average_reward_window = 1
         
-        self.action_space = MultiDiscrete([12, 10])
+        self.action_space_lst = list(np.load('adaptive_tutor/action_space.npy', allow_pickle=True))
+        self.action_space = Discrete(120)
         self.current_student_level = beginner_elo_rating
         self.student = Student(elo_rating=beginner_elo_rating)
         self.puzzle_bank = PuzzleBank()
@@ -91,7 +92,7 @@ class PuzzleTutorEnv(gym.Env):
     
     def _check_terminated(self, themes_covered):
         for val in themes_covered:
-            if val<self.current_student_level+200:
+            if val<self.current_student_level-100:
                 return False
         return True
     
@@ -115,7 +116,9 @@ class PuzzleTutorEnv(gym.Env):
 
         return observation, info
 
-    def step(self, action):
+    def step(self, action_idx):
+        # Action will be a number from 0-119 inclusive
+        action = self.action_space_lst[action_idx]
         
         rating_bracket, theme = action
         sampled_puzzle = self._set_puzzle(action)
