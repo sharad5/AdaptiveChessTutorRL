@@ -23,7 +23,7 @@ class PuzzleTutorEnv(gym.Env):
         self.beginner_elo_rating = beginner_elo_rating
         self.moving_average_reward_window = 1
         
-        self.action_space_lst = list(np.load('adaptive_tutor/action_space.npy', allow_pickle=True))
+        self.action_space_lst = list(np.load('adaptive-tutor/adaptive_tutor/action_space.npy', allow_pickle=True))
         self.action_space = Discrete(120)
         self.current_student_level = beginner_elo_rating
         self.student = Student(elo_rating=beginner_elo_rating)
@@ -44,6 +44,14 @@ class PuzzleTutorEnv(gym.Env):
             "elo_covered": np.zeros(12, dtype=np.int32),
         }
 
+        # Elo Aggregates & Success Rates
+        self.elo_aggregates = {}
+        self.elo_buckets_success_rate = {}
+
+        for elo_bucket in self.metadata["puzzle_rating_brackets"]:
+            self.elo_aggregates[elo_bucket] = {'sum': 0, 'count': 0}
+            self.elo_buckets_success_rate[elo_bucket] = 0
+
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
 
@@ -58,7 +66,7 @@ class PuzzleTutorEnv(gym.Env):
         # return {}
 
     def _get_info(self):
-        return {"info": None}
+        return {"info": self.elo_buckets_success_rate}
 
     def _set_puzzle(self, action):
         return self.puzzle_bank.sample_puzzle(action)
@@ -108,6 +116,10 @@ class PuzzleTutorEnv(gym.Env):
             "elo_covered": np.zeros(12, dtype=np.int32),
         }
 
+        for elo_bucket in self.metadata["puzzle_rating_brackets"]:
+            self.elo_aggregates[elo_bucket] = {'sum': 0, 'count': 0}
+            self.elo_buckets_success_rate[elo_bucket] = 0
+
         observation = self._get_obs()
         info = self._get_info()
 
@@ -140,6 +152,11 @@ class PuzzleTutorEnv(gym.Env):
         # Update the elo_covered in Observational State
         puzzle_elo_rating_index = self.metadata["puzzle_rating_brackets"].index(rating_bracket)
         self.observation_state["elo_covered"][puzzle_elo_rating_index] = 1
+
+        # Elo Bucket Success Rate
+        self.elo_aggregates[rating_bracket]['sum'] += puzzle_success
+        self.elo_aggregates[rating_bracket]['count'] += 1
+        self.elo_buckets_success_rate[rating_bracket] =  self.elo_aggregates[rating_bracket]['sum'] /  self.elo_aggregates[rating_bracket]['count']
 
         reward = self._compute_reward()
         observation = self._get_obs()
