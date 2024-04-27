@@ -1,12 +1,13 @@
 import pandas as pd
 import chess
 import chess.engine
+import numpy as np
 
 class Student:
     def __init__(self, elo_rating):
         # Initialize student attributes
         self.elo_rating = elo_rating 
-        self.lc0_weights = f"maia_Weights/maia_{elo_rating}.pb"
+        self.lc0_weights = f"../maia_weights/maia_{elo_rating}.pb"
         print(self.lc0_weights)
         self.engine = None
         weights_depth = {
@@ -65,14 +66,14 @@ class Student:
     
     # Learning rule: Successfully solves X puzzles around the current bot's level and covers Y themes
     def change_bot(self, change):
-        self.close_engine()
+        #self.close_engine()
         new_elo = self.elo_rating + change
         self.elo_rating = new_elo
-        new_lc0_weights = f"maia_Weights/maia_{new_elo}.pb"
+        new_lc0_weights = f"../maia_Weights/maia_{new_elo}.pb"
         self.lc0_weights = new_lc0_weights
         print(self.lc0_weights)
         
-        self.engine = None
+        #self.engine = None
         
         weights_depth = {
             '1100' : '1',
@@ -206,4 +207,5 @@ print('num_success_themes', num_success_themes)
 if min_elo_solved > SOLVED_PUZZLES and np.mean(num_success_themes) > SOLVED_THEMES:
     if curr_elo_rating < 1900:
         student.change_bot(200)
+
 '''
