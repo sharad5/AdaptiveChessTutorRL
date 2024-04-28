@@ -2,7 +2,8 @@ import gym
 from gym.spaces import MultiDiscrete, Discrete, Box, Dict, Sequence, Tuple, Text
 from adaptive_tutor.envs.components import Student, PuzzleBank
 import numpy as np
-
+from collections import deque
+import heapq
 
 class PuzzleTutorEnv(gym.Env):
     metadata = {
@@ -29,6 +30,7 @@ class PuzzleTutorEnv(gym.Env):
         self.student = Student(elo_rating=beginner_elo_rating)
         self.puzzle_bank = PuzzleBank()
         self.learning_rate = 0.5
+        self.puzzle_windows = [FixedMaxHeap() for _ in range(10)]
 
         # self.observation_space = Dict({
         #     "puzzle_success_history": Sequence(Tuple((Text(20), Discrete(2), Text(15)))),
@@ -102,7 +104,7 @@ class PuzzleTutorEnv(gym.Env):
         r3 = self.puzzle_success_history.shape[0]
 
 
-        return r1/1900 + np.min(observation["themes_covered"])/1900 - 3
+        return r1/1900 - 2
     
     def _check_terminated(self, themes_covered):
 
@@ -115,13 +117,7 @@ class PuzzleTutorEnv(gym.Env):
         if av <= self.current_student_level:
             return False'''
 
-        if self.current_student_level<1500:
-            return False
-        for val in themes_covered:
-            if val<self.current_student_level - 300:
-                return False
-
-        return True
+        return self.current_student_level>=1900
     
 
     def reset(self, seed=None, options=None):
@@ -143,28 +139,26 @@ class PuzzleTutorEnv(gym.Env):
         self.student = Student(elo_rating=self.beginner_elo_rating)
         # if self.render_mode == "human":
         #     self._render_frame()
+        self.puzzle_windows = [FixedMaxHeap() for _ in range(10)]
 
         return observation, info
     
     def learning_rule(self, x=5, y=5):
-        SOLVED_PUZZLES = x
-        SOLVED_THEMES = y
-        num_success_themes = np.sum(np.where(self.observation_state.get('themes_covered') > 0, 1, 0))
-        success_at_rating = np.where(self.observation_state.get('themes_covered') > self.current_student_level - 100, 1, 0)
-        num_success_puzzles_at_rating = np.sum(success_at_rating * self.observation_state.get('num_success_themes_covered'))
-        for key, val in self.elo_aggregates.items():
-            #print(key)
-            #print(self._convert_bracket_to_reward(key))
-            if self._convert_bracket_to_reward(key)>self.current_student_level and val['count']>0:
-                #if val['sum']/val['count']>0.5 and val['sum']>5 and val['count']>10:
-                #if val['sum']>10 and val['count']>20 and :
-                if num_success_themes>SOLVED_THEMES and num_success_puzzles_at_rating>SOLVED_PUZZLES:
-                    if self.current_student_level < 1500:
-                        self.current_student_level +=200
-                        self.student.change_bot(200)
-                        self.learning_rate = self.learning_rate * 0.9
-                        return True
-        return False
+        curr_elo_rating = self.current_student_level
+
+        SOLVED_PUZZLES = curr_elo_rating - 50 #X
+        SOLVED_THEMES = 10 #Y
+
+        # min_elo_solved = np.min(self.observation_state.get('themes_covered'))
+        print(self.observation_state.get('themes_covered'))
+
+        # num_success_themes = np.sum(np.where(self.observation_state.get('themes_covered') > 0, 1, 0))
+        # print('num_success_themes', num_success_themes)
+
+        if np.sum(self.observation_state.get('themes_covered') > SOLVED_PUZZLES) >= SOLVED_THEMES:
+            self.student.change_bot(200)
+            self.current_student_level+=200
+            return True
 
 
 
@@ -186,10 +180,15 @@ class PuzzleTutorEnv(gym.Env):
         theme_index = self.metadata["themes"].index(theme)
         
 
-        if puzzle_success:
-            self.observation_state["themes_covered"][theme_index] = (self.observation_state["num_success_themes_covered"][theme_index] * self.observation_state["themes_covered"][theme_index] +  sampled_puzzle['Rating'])/(self.observation_state[ "num_success_themes_covered"][theme_index]+1)
-            # self.observation_state["themes_covered"][theme_index] = max(self.observation_state["themes_covered"][theme_index], sampled_puzzle['Rating'])
-            self.observation_state[ "num_success_themes_covered"][theme_index] += 1
+        self.puzzle_windows[theme_index].push(puzzle_success * sampled_puzzle['Rating'])
+
+        
+        self.observation_state["themes_covered"][theme_index] = self.puzzle_windows[theme_index].get_average()
+
+        # if puzzle_success:
+        #     self.observation_state["themes_covered"][theme_index] = sum([val for val in self.puzzle_windows[theme_index]])/len()
+        #     self.observation_state["themes_covered"][theme_index] = max(self.observation_state["themes_covered"][theme_index], sampled_puzzle['Rating'])
+        self.observation_state[ "num_success_themes_covered"][theme_index] += puzzle_success
 
         # Elo Bucket Success Rate
         self.elo_aggregates[rating_bracket]['sum'] += puzzle_success
@@ -223,3 +222,21 @@ class PuzzleTutorEnv(gym.Env):
 
     def close(self):
         pass
+
+class FixedMaxHeap:
+    def __init__(self):
+        self.heap = []
+        self.size = 0
+
+    def push(self, num):
+        if self.size < 10:
+            heapq.heappush(self.heap, num)
+            self.size += 1
+        elif num > self.heap[0]:
+            heapq.heappop(self.heap)
+            heapq.heappush(self.heap, num)
+
+    def get_average(self):
+        if self.size < 10:
+            return 0
+        return sum(self.heap)/self.size
