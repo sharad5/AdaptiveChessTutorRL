@@ -214,11 +214,10 @@ class PuzzleTutorEnv(gym.Env):
         if self.render_mode == "human":
             self._render_frame()
 
-        return observation, reward, terminated, False, info
+        return observation, reward, terminated, info
 
-    def render(self):
-        if self.render_mode == "rgb_array":
-            return self._render_frame()
+    def render(self, mode="human"):
+        return self._get_obs()
 
     def close(self):
         pass
