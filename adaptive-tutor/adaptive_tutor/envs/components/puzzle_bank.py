@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import random
 
 class PuzzleBank:
@@ -8,7 +9,7 @@ class PuzzleBank:
         self.bank = pd.read_pickle('adaptive_tutor/puzzle_bank_small.pkl')
 
     def _get_puzzle(self, puzzleId):
-        puzzle_row = self.lichess_data.loc[self.lichess_data.PuzzleId==puzzleId].squeeze()
+        puzzle_row = self.lichess_data.loc[self.lichess_data.PuzzleId.isin(puzzleId)]
         return puzzle_row
 
     def sample_puzzle(self, action):
@@ -16,5 +17,6 @@ class PuzzleBank:
         action: (rating_bracket, theme) tuple
         '''
         # puzzleId = random.choice(self.bank.loc[action].PuzzleId)
-        puzzleId = self.bank.loc[action].PuzzleId[0]
+        k = 10
+        puzzleId = np.random.choice(self.bank.loc[action].PuzzleId, 10)
         return self._get_puzzle(puzzleId)

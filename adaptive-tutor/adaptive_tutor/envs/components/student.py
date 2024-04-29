@@ -49,20 +49,22 @@ class Student:
 
     def solve_puzzle(self, puzzle):
         # Extract puzzle data
-        fen = puzzle['FEN']
-        move_start = chess.Move.from_uci(puzzle['Moves'].split(' ')[0])
-        move_student = chess.Move.from_uci(puzzle['Moves'].split(' ')[1])
+        success_array = []
+        for idx, row in puzzle.iterrows():
+            fen = row['FEN']
+            move_start = chess.Move.from_uci(row['Moves'].split(' ')[0])
+            move_student = chess.Move.from_uci(row['Moves'].split(' ')[1])
 
-        # Initialize the engine if not already initialized
-        if not self.engine:
-            self.initialize_engine()
+            # Initialize the engine if not already initialized
+            if not self.engine:
+                self.initialize_engine()
 
-        # Predict the move
-        predicted_move = self.predict_move(fen, move_start)
+            # Predict the move
+            predicted_move = self.predict_move(fen, move_start)
 
-        success = self.calculate_success(predicted_move, move_student)
+            success_array.append(self.calculate_success(predicted_move, move_student))
 
-        return success
+        return sum(success_array)/len(success_array) > 0.5
     
     # Learning rule: Successfully solves X puzzles around the current bot's level and covers Y themes
     def change_bot(self, change):
