@@ -10,7 +10,7 @@ class Student:
         self.lc0_weights = f"../maia_weights/maia_{elo_rating}.pb"
         print(self.lc0_weights)
         self.engine = None
-        weights_depth = {
+        self.weights_depth = {
             '1100' : '1',
             '1300' : '2',
             '1500' : '3',
@@ -18,13 +18,13 @@ class Student:
             '1900' : '5'
             }
         
-        self.depth = weights_depth.get(str(elo_rating), None)
+        self.depth = self.weights_depth.get(str(elo_rating), None)
         print(self.depth)
 
     def initialize_engine(self):
         # Initialize the engine with specified LCZero weights
         self.engine = chess.engine.SimpleEngine.popen_uci("/opt/homebrew/bin/lc0")
-        self.engine.configure({"WeightsFile": self.lc0_weights})
+        self.engine.configure({"WeightsFile": self.lc0_weights, "RamLimitMb": 12000, "NNCacheSize": 100000})
 
     def close_engine(self):
         # Close the engine
@@ -69,21 +69,13 @@ class Student:
         #self.close_engine()
         new_elo = self.elo_rating + change
         self.elo_rating = new_elo
-        new_lc0_weights = f"../maia_Weights/maia_{new_elo}.pb"
+        new_lc0_weights = f"../maia_weights/maia_{new_elo}.pb"
         self.lc0_weights = new_lc0_weights
         print(self.lc0_weights)
         
-        #self.engine = None
+        self.close_engine()
         
-        weights_depth = {
-            '1100' : '1',
-            '1300' : '2',
-            '1500' : '3',
-            '1700' : '4',
-            '1900' : '5'
-            }
-        
-        self.depth = weights_depth.get(str(new_elo), None)
+        self.depth = self.weights_depth.get(str(new_elo), None)
         print(self.depth)
 
 # ------------------------------ Example of Student usage ------------------------------ #
