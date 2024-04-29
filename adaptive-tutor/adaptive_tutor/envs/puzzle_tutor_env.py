@@ -180,7 +180,7 @@ class PuzzleTutorEnv(gym.Env):
         theme_index = self.metadata["themes"].index(theme)
         
 
-        self.puzzle_windows[theme_index].push(puzzle_success * sampled_puzzle['Rating'])
+        self.puzzle_windows[theme_index].push(puzzle_success * np.mean(sampled_puzzle['Rating']))
 
         
         self.observation_state["themes_covered"][theme_index] = self.puzzle_windows[theme_index].get_average()
