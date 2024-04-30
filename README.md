@@ -1,6 +1,8 @@
 # Adaptive Chess Tutor
 Goal: Develop an adaptive teaching system by modeling Teacher as an RL agent. The Students are simulated through heuristics controlled Chess Bots.
 
+Main Github Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/main
+
 ## Environment
 Custom RL Environment - `PuzzleTutorEnv-v0`
 
@@ -19,8 +21,9 @@ Custom RL Environment - `PuzzleTutorEnv-v0`
 - `cd adaptive-tutor`
 - `python adaptive_tutor/agents/dqn_sb_agent.py`
 
-### A2C Agent additional experiment (Branck Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/a2c_avg)
+### A2C Agent additional experiment 
+(Branck Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/a2c_avg)
 - `cd adaptive-tutor`
 - `python adaptive_tutor/agents/a2c_sb_agent.py`
 
-Github Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/main
+
