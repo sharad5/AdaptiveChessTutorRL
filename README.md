@@ -19,4 +19,4 @@ Custom RL Environment - `PuzzleTutorEnv-v0`
 - `cd adaptive-tutor`
 - `python adaptive_tutor/agents/dqn_sb_agent.py`
 
-Github Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/a2c
+Github Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/main
