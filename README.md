@@ -19,4 +19,8 @@ Custom RL Environment - `PuzzleTutorEnv-v0`
 - `cd adaptive-tutor`
 - `python adaptive_tutor/agents/dqn_sb_agent.py`
 
+### A2C Agent additional experiment (Branck Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/a2c_avg)
+- `cd adaptive-tutor`
+- `python adaptive_tutor/agents/a2c_sb_agent.py`
+
 Github Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/main
