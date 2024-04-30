@@ -18,11 +18,11 @@ class PuzzleTutorEnv(gym.Env):
     def __init__(self, 
                  render_mode=None, 
                  beginner_elo_rating=1100,
-                 moving_average_reward_window=20):
+                 moving_average_reward_window=1):
         super(PuzzleTutorEnv, self).__init__()
 
         self.beginner_elo_rating = beginner_elo_rating
-        self.moving_average_reward_window = 1
+        self.moving_average_reward_window = moving_average_reward_window
         
         self.action_space_lst = list(np.load('adaptive_tutor/action_space_small.npy', allow_pickle=True))
         self.action_space = Discrete(40)
@@ -32,13 +32,6 @@ class PuzzleTutorEnv(gym.Env):
         self.learning_rate = 0.5
         self.puzzle_windows = [FixedMaxHeap() for _ in range(5)]
         self.lr = None
-
-        # self.observation_space = Dict({
-        #     "puzzle_success_history": Sequence(Tuple((Text(20), Discrete(2), Text(15)))),
-        #     "themes_covered": Box(low=0, high=1, shape=(10,), dtype=np.int32),
-        #     "num_success_themes_covered": Box(low=0, high=1e6, shape=(10,), dtype=np.int32),
-        #     "elo_covered": Box(low=0, high=1, shape=(12,), dtype=np.int32),
-        # })
 
         self.observation_space = Dict({
             "themes_covered": Box(low=0, high=1, shape=(5,), dtype=np.int32),
@@ -65,25 +58,33 @@ class PuzzleTutorEnv(gym.Env):
         self.render_mode = render_mode
 
     def _get_obs(self):
-        # observation_keys_to_relay = ["puzzle_success_history", "themes_covered", "elo_covered"]
-        # return {key: self.observation_state[key] for key in self.observation_state.keys()}
-
-        # return { key:(value[-1*(self.moving_average_reward_window):] if key=="puzzle_success_history"
-        #   else value) for key, value in self.observation_state.items() }
+        """
+        Return the Observation State
+        """
         return self.observation_state
 
-        # return {}
-
     def _get_info(self):
+        """
+        Return the Info State
+        """
         return {"info": self.elo_buckets_success_rate}
 
     def _set_puzzle(self, action):
+        """
+        Based on the theme and elo_rating, returns the appropriate puzzle
+        """
         return self.puzzle_bank.sample_puzzle(action)
     
     def _student_attempt_puzzle(self, puzzle):
+        """
+        Calls the student's solve puzzle function
+        """
         return self.student.solve_puzzle(puzzle)
     
     def _convert_bracket_to_reward(self, rating_bracket):
+        """
+        Converts string rating_bracket into integer elo_rating
+        """
         if rating_bracket[:2]=='gt':
             return 1700
         elif rating_bracket[:2]=='lt':
@@ -92,33 +93,18 @@ class PuzzleTutorEnv(gym.Env):
             return int(rating_bracket.split('-')[0])
 
     def _compute_reward(self):
-        observation = self._get_obs()
-
-        # r1 = MovingAverage(success * ELO Rating of Puzzle, 20)
+        """
+        Reward Function
+        """
         relevant_puzzle_history = self.puzzle_success_history[(-1*self.moving_average_reward_window):]
         r1 = np.mean([int(x[1]) * self._convert_bracket_to_reward(x[2]) for x in relevant_puzzle_history])
-
-        # r2 = (# Themes Successfully solved)
-        r2 = observation["themes_covered"].sum()
-
-        # r3 = (# Puzzles Covered)
-        r3 = self.puzzle_success_history.shape[0]
-
-        
 
         return -1 + ((np.abs(r1 - self.current_student_level)<=100) * r1)/1900
     
     def _check_terminated(self, themes_covered):
-
-        # Updated
-        
-        '''av = 0
-        for val in themes_covered:
-            av += val 
-        av = av / len(themes_covered)
-        if av <= self.current_student_level:
-            return False'''
-
+        """
+        Episode Terminating Condition: Terminate the Episode when Student bot's level is atleast 1700
+        """
         return self.current_student_level>=1700
     
 
@@ -139,8 +125,6 @@ class PuzzleTutorEnv(gym.Env):
         info = self._get_info()
         self.current_student_level = self.beginner_elo_rating
         self.student = Student(elo_rating=self.beginner_elo_rating)
-        # if self.render_mode == "human":
-        #     self._render_frame()
         self.puzzle_windows = [FixedMaxHeap() for _ in range(5)]
 
         #Setting a learning rule randomly at start of episode
@@ -153,6 +137,9 @@ class PuzzleTutorEnv(gym.Env):
         return observation, info
     
     def update_bot(self):
+        """
+        Update the chess bot powering the student based on learning rule
+        """
         if self.lr.learning_rule(self.current_student_level, self.observation_state.get('themes_covered')):
             self.student.change_bot(200)
             self.current_student_level+=200
@@ -160,17 +147,13 @@ class PuzzleTutorEnv(gym.Env):
         else:
             return False
 
-
-
     def step(self, action_idx):
         # Action will be a number from 0-119 inclusive
         action = self.action_space_lst[action_idx]
         
         rating_bracket, theme = action
         sampled_puzzle = self._set_puzzle(action)
-        # print(sampled_puzzle)
         puzzle_success = self._student_attempt_puzzle(sampled_puzzle)
-        
         
         # Update the puzzle_success_history in Observational State
         puzzle_success_tuple = np.array([theme, int(puzzle_success), rating_bracket]).reshape(-1,3)
@@ -178,16 +161,11 @@ class PuzzleTutorEnv(gym.Env):
         
         # Update the themes_covered in Observational State
         theme_index = self.metadata["themes"].index(theme)
-        
 
         self.puzzle_windows[theme_index].push(puzzle_success * sampled_puzzle['Rating'])
-
         
         self.observation_state["themes_covered"][theme_index] = self.puzzle_windows[theme_index].get_average()
 
-        # if puzzle_success:
-        #     self.observation_state["themes_covered"][theme_index] = sum([val for val in self.puzzle_windows[theme_index]])/len()
-        #     self.observation_state["themes_covered"][theme_index] = max(self.observation_state["themes_covered"][theme_index], sampled_puzzle['Rating'])
         self.observation_state[ "num_success_themes_covered"][theme_index] += puzzle_success
 
         # Elo Bucket Success Rate
@@ -195,16 +173,10 @@ class PuzzleTutorEnv(gym.Env):
         self.elo_aggregates[rating_bracket]['count'] += 1
         self.elo_buckets_success_rate[rating_bracket] =  self.elo_aggregates[rating_bracket]['sum'] /  self.elo_aggregates[rating_bracket]['count']
 
-        #################################################
-        #print(self.elo_aggregates)
-        #print(self.elo_buckets_success_rate)
-        #print(self.observation_state["themes_covered"])
-        
-
         reward = self._compute_reward()
         observation = self._get_obs()
         info = self._get_info()
-        #print(puzzle_success_tuple)
+        
         bot_update = self.update_bot()
         if bot_update:
             print('Bot_Upgraded')

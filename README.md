@@ -8,3 +8,13 @@ Custom RL Environment - `PuzzleTutorEnv-v0`
 - Register the Environment: `pygmentize adaptive-tutor/adaptive_tutor/__init__.py`
 - Create Python package: `pygmentize adaptive-tutor/setup.py`
 - Install the python package: `pip install -e adaptive-tutor`
+
+## Agents (Stable-Baselines)
+
+### A2C (Actor-Critic) Agent
+- cd adaptive-tutor
+- python adaptive_tutor/agents/a2c_sb_agent.py
+
+### DQN (Deep Q Network) Agent
+- cd adaptive-tutor
+- python adaptive_tutor/agents/dqn_sb_agent.py
