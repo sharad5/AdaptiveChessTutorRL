@@ -12,9 +12,11 @@ Custom RL Environment - `PuzzleTutorEnv-v0`
 ## Agents (Stable-Baselines)
 
 ### A2C (Actor-Critic) Agent
-- cd adaptive-tutor
-- python adaptive_tutor/agents/a2c_sb_agent.py
+- `cd adaptive-tutor`
+- `python adaptive_tutor/agents/a2c_sb_agent.py`
 
 ### DQN (Deep Q Network) Agent
-- cd adaptive-tutor
-- python adaptive_tutor/agents/dqn_sb_agent.py
+- `cd adaptive-tutor`
+- `python adaptive_tutor/agents/dqn_sb_agent.py`
+
+Github Link: https://github.com/sharad5/AdaptiveChessTutorRL/tree/a2c
